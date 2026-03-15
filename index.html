@@ -42,6 +42,31 @@
 <body>
 
 <!-- ============================================================
+     OVERLAY SENHA DE ESTANTE
+============================================================ -->
+<div id="senha-overlay" role="dialog" aria-modal="true">
+  <div class="senha-sheet">
+    <div style="text-align:center; margin-bottom:1.25rem;">
+      <i data-lucide="lock" style="width:36px;height:36px;color:var(--navy-800);margin-bottom:0.5rem;"></i>
+      <h3 style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--navy-800);margin:0 0 0.25rem;">
+        Estante Protegida
+      </h3>
+      <p style="font-family:'Inter',sans-serif;font-size:0.82rem;color:var(--gray-400);">
+        "<span id="senha-estante-nome"></span>"
+      </p>
+    </div>
+    <input type="password" id="senha-input" placeholder="Digite a senha..." style="text-align:center;letter-spacing:0.2em;font-size:1.2rem;">
+    <p id="senha-erro" style="display:none;color:var(--red-600);font-family:'Inter',sans-serif;font-size:0.78rem;text-align:center;margin-top:0.4rem;"></p>
+    <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+      <button class="btn btn-ghost" onclick="fecharSenhaOverlay()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-primary" onclick="window._senhaConfirmar && window._senhaConfirmar()" style="flex:1;">
+        <i data-lucide="unlock"></i> Entrar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
      DESAFIO DIÁRIO (overlay bottom-sheet)
 ============================================================ -->
 <div id="desafio-overlay" role="dialog" aria-modal="true" aria-label="Desafio do Dia">
@@ -231,10 +256,10 @@
 ============================================================ -->
 <main id="main-content">
 
-  <!-- ==================== ABA: HOME ==================== -->
+  <!-- ==================== ABA: HOME ====================  -->
   <div id="tab-home" class="tab-content" style="display:block; opacity:1;">
 
-    <!-- Stats -->
+    <!-- Stats rápidas -->
     <div class="home-stats">
       <div class="home-stat-card" onclick="setTab('lista')">
         <span class="home-stat-num" id="home-stat-livros">0</span>
@@ -250,22 +275,69 @@
       </div>
     </div>
 
-    <!-- Frase Curiosa -->
+    <!-- Frase curiosa -->
     <div class="home-frase-card" id="home-frase-card">
       <p class="home-frase-texto" id="home-frase-texto">
         <span class="frase-loading">A buscar uma curiosidade literária...</span>
       </p>
       <span class="home-frase-livro" id="home-frase-livro"></span>
       <div class="home-frase-actions">
-        <button class="home-frase-refresh" onclick="refreshFrase()" title="Nova frase">
+        <button class="home-frase-refresh" onclick="refreshFrase()">
           <i data-lucide="refresh-cw"></i> Nova frase
         </button>
       </div>
     </div>
 
+    <!-- Estantes (destaque) -->
+    <div class="card" style="margin-top:1rem;">
+      <div class="home-section-header">
+        <h3><i data-lucide="library"></i> Minhas Estantes</h3>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <button class="btn btn-ghost" onclick="abrirDesafioManual()"
+                  style="padding:0.3rem 0.7rem;font-size:0.72rem;border-radius:999px;border-color:var(--gold-300);color:var(--gold-600);">
+            <i data-lucide="zap" style="width:12px;height:12px;"></i> Desafio
+          </button>
+          <a class="home-section-link" onclick="setTab('estantes')">
+            Gerir <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+          </a>
+        </div>
+      </div>
+      <div class="home-estantes-grid" id="home-estantes-destaque"></div>
+    </div>
+
+    <!-- Últimos documentos + Livros (grid 2 col) -->
     <div class="home-grid" style="margin-top:1rem;">
 
-      <!-- Últimos Livros -->
+      <!-- Últimos docs -->
+      <div class="card">
+        <div class="home-section-header">
+          <h3><i data-lucide="paperclip"></i> Últimos Ficheiros</h3>
+          <a class="home-section-link" onclick="setTab('estantes')">
+            Ver <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+          </a>
+        </div>
+        <div id="home-ultimos-docs"></div>
+      </div>
+
+      <!-- Metas -->
+      <div class="card">
+        <div class="home-section-header">
+          <h3><i data-lucide="check-circle-2"></i> Metas
+            <span id="metas-count" class="badge badge-navy"
+                  style="font-size:0.6rem;margin-left:0.3rem;vertical-align:middle;"></span>
+          </h3>
+        </div>
+        <ul class="metas-lista" id="metas-lista"></ul>
+        <div class="meta-add-group">
+          <input type="text" id="meta-input" placeholder="Nova meta..."
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarMeta();}">
+          <button class="btn btn-primary" onclick="adicionarMeta()" style="flex-shrink:0; padding:0.65rem 0.85rem;">
+            <i data-lucide="plus"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Últimos livros -->
       <div class="card" style="grid-column:1/-1;">
         <div class="home-section-header">
           <h3><i data-lucide="clock"></i> Adicionados Recentemente</h3>
@@ -274,39 +346,6 @@
           </a>
         </div>
         <div class="home-livros-scroll" id="home-ultimos-livros"></div>
-      </div>
-
-      <!-- Estantes -->
-      <div class="card">
-        <div class="home-section-header">
-          <h3><i data-lucide="library"></i> Minhas Estantes</h3>
-          <a class="home-section-link" onclick="setTab('estantes')">
-            Ver todas <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
-          </a>
-        </div>
-        <div class="home-estantes-pills" id="home-estantes-preview"></div>
-      </div>
-
-      <!-- Metas -->
-      <div class="card" style="grid-column: span 1;">
-        <div class="home-section-header">
-          <h3><i data-lucide="check-circle-2"></i> Metas
-            <span id="metas-count" class="badge badge-navy" style="font-size:0.6rem;margin-left:0.3rem;vertical-align:middle;"></span>
-          </h3>
-          <button class="btn-icon" onclick="abrirDesafioManual()" title="Desafio do dia"
-                  style="padding:0.3rem 0.6rem;border-radius:999px;background:var(--gold-50);border:1px solid var(--gold-300);">
-            <i data-lucide="zap" style="width:13px;height:13px;color:var(--gold-600);"></i>
-            <span style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:700;color:var(--gold-600);margin-left:0.2rem;">Desafio</span>
-          </button>
-        </div>
-        <ul class="metas-lista" id="metas-lista"></ul>
-        <div class="meta-add-group">
-          <input type="text" id="meta-input" placeholder="Nova meta ou objectivo..."
-                 onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarMeta();}">
-          <button class="btn btn-primary" onclick="adicionarMeta()" style="flex-shrink:0;">
-            <i data-lucide="plus"></i>
-          </button>
-        </div>
       </div>
 
     </div><!-- .home-grid -->
@@ -804,6 +843,21 @@
       <div>
         <label><i data-lucide="align-left"></i> Descrição (Opcional)</label>
         <input type="text" id="estante-form-desc" placeholder="Ex: Livros e notas de filosofia grega">
+      </div>
+
+      <div>
+        <label><i data-lucide="lock"></i> Senha (Opcional)</label>
+        <div class="input-group">
+          <input type="password" id="estante-form-senha" placeholder="Deixe em branco para sem senha"
+                 autocomplete="new-password">
+          <button type="button" class="btn btn-ghost" style="flex-shrink:0;"
+                  onclick="_toggleSenhaVisivel()"  title="Mostrar/ocultar senha">
+            <i data-lucide="eye" style="width:14px;height:14px;" id="senha-eye-icon"></i>
+          </button>
+        </div>
+        <p style="font-family:'Inter',sans-serif;font-size:0.68rem;color:var(--gray-400);margin-top:0.25rem;">
+          Se definida, pedirá senha ao abrir a estante.
+        </p>
       </div>
 
       <div>

@@ -1658,3 +1658,180 @@ tbody td.center { text-align: center; }
   .tab-label { display: none; }
   .tab-btn svg { width: 18px; height: 18px; }
 }
+
+/* ── Overlay Senha ── */
+#senha-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,31,61,0.75);
+  backdrop-filter: blur(6px);
+  z-index: 9800;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fadeIn 0.18s ease;
+}
+#senha-overlay.visible { display: flex; }
+
+.senha-sheet {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xl);
+  padding: 2rem 1.75rem;
+  width: 100%;
+  max-width: 360px;
+  animation: slideUp 0.22s cubic-bezier(.4,0,.2,1);
+}
+
+/* ── Home: Estantes destaque (grid de cards de prateleira) ── */
+.home-estantes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.85rem;
+}
+
+.home-estante-card {
+  background: #fff;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid var(--gray-200);
+}
+.home-estante-card:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+.home-estante-mais {
+  background: var(--gray-50);
+  min-height: 110px;
+  border: 2px dashed var(--gray-200);
+}
+
+.home-estante-shelf {
+  padding: 0.6rem 0.6rem 0;
+  background: linear-gradient(180deg, #f9f5ee 0%, #ede8dc 100%);
+  position: relative;
+}
+.home-estante-shelf-top {
+  height: 6px;
+  background: var(--cor, var(--navy-800));
+  border-radius: 2px 2px 0 0;
+  margin-bottom: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+.home-shelf-spines {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  min-height: 60px;
+  padding: 0 3px;
+}
+.home-spine {
+  width: 14px;
+  border-radius: 2px 2px 0 0;
+  flex-shrink: 0;
+  box-shadow: 1px 0 2px rgba(0,0,0,0.15);
+}
+.home-estante-shelf-bottom {
+  height: 7px;
+  background: var(--cor, var(--navy-800));
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.home-estante-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+}
+.home-estante-card-icon {
+  width: 14px; height: 14px;
+  color: var(--cor, var(--navy-800));
+  flex-shrink: 0;
+}
+.home-estante-card-text { flex: 1; min-width: 0; }
+.home-estante-card-nome {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--navy-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-estante-card-desc {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--gray-400);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Home: Últimos docs ── */
+#home-ultimos-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.home-doc-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-100);
+  transition: var(--transition);
+}
+.home-doc-item:hover { background: var(--navy-50); }
+.home-doc-icon {
+  width: 32px; height: 32px;
+  background: var(--navy-100);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  color: var(--navy-800);
+}
+.home-doc-info { flex: 1; min-width: 0; }
+.home-doc-nome {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--navy-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-doc-data {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.65rem;
+  color: var(--gray-400);
+}
+.home-doc-link {
+  color: var(--navy-600);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+.home-doc-link:hover { background: var(--navy-100); }
+
+/* ── Links home ── */
+.home-link {
+  color: var(--navy-600);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .home-estantes-grid { grid-template-columns: repeat(2, 1fr); }
+}

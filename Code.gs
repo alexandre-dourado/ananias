@@ -30,7 +30,7 @@ const LIVROS_HEADERS = [
   'Assunto','Ano','Observações','CapaURL','DataCadastro'
 ];
 const ESTANTES_HEADERS = [
-  'ID','Nome','Descricao','Cor','Icone','DataCriacao'
+  'ID','Nome','Descricao','Cor','Icone','Senha','DataCriacao'
 ];
 const ITENS_HEADERS = [
   'ID','EstanteID','Tipo','Titulo','Conteudo',
@@ -229,13 +229,16 @@ function _estanteFromRow(r) {
   return {
     id: String(r[0]||''), nome: String(r[1]||''), descricao: String(r[2]||''),
     cor: String(r[3]||'#1e3a5f'), icone: String(r[4]||'library'),
-    dataCriacao: r[5] ? String(r[5]) : ''
+    senha: String(r[5]||''),
+    dataCriacao: r[6] ? String(r[6]) : ''
   };
 }
 
 function _estanteToRow(e, id, dt) {
   return [id||e.id||'', e.nome||'', e.descricao||'',
-          e.cor||'#1e3a5f', e.icone||'library', dt||new Date().toISOString()];
+          e.cor||'#1e3a5f', e.icone||'library',
+          e.senha||'',
+          dt||new Date().toISOString()];
 }
 
 function _metaFromRow(r) {
@@ -362,8 +365,10 @@ function svcGetEstantes() {
 
   const estantes = _readAll(_shEstantes(), _estanteFromRow);
   estantes.sort((a,b) => new Date(a.dataCriacao||0) - new Date(b.dataCriacao||0));
-  cacheSet(CACHE_KEY_ESTANTES, estantes);
-  return { success: true, data: estantes };
+  // Marca estantes protegidas SEM enviar a senha para o cliente
+  const safe = estantes.map(e => ({ ...e, senha: e.senha ? '***' : '' }));
+  cacheSet(CACHE_KEY_ESTANTES, safe);
+  return { success: true, data: safe };
 }
 
 function svcCriarEstante(estante) {
@@ -396,11 +401,15 @@ function svcActualizarEstante(id, dados) {
   const sh  = _shEstantes();
   const row = _findRow(sh, id);
   if (row === -1) return { success: false, error: 'Estante não encontrada.' };
-  const orig   = sh.getRange(row, 1, 1, ESTANTES_HEADERS.length).getValues()[0];
-  const newRow = _estanteToRow(dados, id, orig[5]);
+  const orig = sh.getRange(row, 1, 1, ESTANTES_HEADERS.length).getValues()[0];
+  // Se a nova senha vier vazia E a original não for vazia, preserva a original
+  if (!dados.senha && orig[5]) dados.senha = orig[5];
+  const newRow = _estanteToRow(dados, id, orig[6]);
   sh.getRange(row, 1, 1, ESTANTES_HEADERS.length).setValues([newRow]);
   cacheInvalidate(CACHE_KEY_ESTANTES);
-  return { success: true, data: _estanteFromRow(newRow) };
+  const safe = _estanteFromRow(newRow);
+  safe.senha = safe.senha ? '***' : '';
+  return { success: true, data: safe };
 }
 
 function svcEliminarEstante(id) {

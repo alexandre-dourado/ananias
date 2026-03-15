@@ -340,6 +340,9 @@ function _preencherFormEstante(est) {
     </button>
   `).join('');
 
+  const senhaEl = document.getElementById('estante-form-senha');
+  if (senhaEl) senhaEl.value = ''; // nunca pré-preenche por segurança
+
   document.getElementById('modal-estante-title').textContent =
     est ? 'Editar Estante' : 'Nova Estante';
 
@@ -364,6 +367,7 @@ async function salvarEstante() {
   const icEl   = document.querySelector('.icone-btn.selected');
   const cor    = corEl  ? corEl.dataset.cor   : '#1e3a5f';
   const icone  = icEl   ? icEl.dataset.icone  : 'library';
+  const senha  = document.getElementById('estante-form-senha')?.value.trim() || '';
 
   if (!nome) { mostrarToast('O nome da estante é obrigatório.', 'error'); return; }
 
@@ -371,13 +375,13 @@ async function salvarEstante() {
   try {
     let res;
     if (id) {
-      res = await apiActualizarEstante(id, { nome, descricao: desc, cor, icone });
+      res = await apiActualizarEstante(id, { nome, descricao: desc, cor, icone, senha });
       if (res.success) {
         const idx = ESTANTES.lista.findIndex(e => e.id === id);
         if (idx !== -1) ESTANTES.lista[idx] = res.data;
       }
     } else {
-      res = await apiCriarEstante({ nome, descricao: desc, cor, icone });
+      res = await apiCriarEstante({ nome, descricao: desc, cor, icone, senha });
       if (res.success) ESTANTES.lista.push(res.data);
     }
 
@@ -625,5 +629,18 @@ async function uploadCapaLivro(inputFileId, targetInputId) {
   } finally {
     ocultarLoading();
     if (input) input.value = '';
+  }
+}
+
+// ─── TOGGLE VISIBILIDADE SENHA ───────────────────────────────
+function _toggleSenhaVisivel() {
+  const input   = document.getElementById('estante-form-senha');
+  const icon    = document.getElementById('senha-eye-icon');
+  if (!input) return;
+  const isPass  = input.type === 'password';
+  input.type    = isPass ? 'text' : 'password';
+  if (icon) {
+    icon.setAttribute('data-lucide', isPass ? 'eye-off' : 'eye');
+    lucide.createIcons({ nodes: [icon.parentElement] });
   }
 }
