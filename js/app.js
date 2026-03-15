@@ -450,8 +450,15 @@ APP.abrirModalEditar = function(id) {
     </div>
     <div class="form-col-2">
       <label><i data-lucide="image"></i> URL da Capa</label>
-      <input type="url" id="e-capa" value="${esc(livro.capaURL || '')}"
-             placeholder="https://...">
+      <div class="input-group" style="flex-wrap:wrap;">
+        <input type="url" id="e-capa" value="${esc(livro.capaURL || '')}"
+               placeholder="https://..." style="min-width:180px;">
+        <label class="btn btn-ghost" style="cursor:pointer;flex-shrink:0;margin:0;" title="Upload de imagem para o Drive">
+          <i data-lucide="upload"></i> Upload
+          <input type="file" id="e-capa-upload" accept="image/*" style="display:none;"
+                 onchange="uploadCapaLivro('e-capa-upload','e-capa')">
+        </label>
+      </div>
     </div>
     <div class="form-col-2">
       <label><i data-lucide="message-square"></i> Observações</label>

@@ -236,12 +236,20 @@
 
         <div class="form-col-2">
           <label><i data-lucide="image"></i> URL da Capa (Opcional)</label>
-          <div class="input-group">
-            <input type="url" id="c-capa" placeholder="https://... ou clique em buscar →">
-            <button class="btn btn-ghost" onclick="buscarCapaAutomatica()" title="Buscar capa via Google Books" style="flex-shrink:0; white-space:nowrap;">
-              <i data-lucide="search"></i> Buscar Capa
+          <div class="input-group" style="flex-wrap:wrap;">
+            <input type="url" id="c-capa" placeholder="Cole URL ou use os botões →" style="min-width:180px;">
+            <button class="btn btn-ghost" onclick="buscarCapaAutomatica()" title="Buscar capa via Google Books" style="flex-shrink:0;">
+              <i data-lucide="search"></i> Buscar
             </button>
+            <label class="btn btn-ghost" style="cursor:pointer; flex-shrink:0; margin:0;" title="Fazer upload de imagem para o Drive">
+              <i data-lucide="upload"></i> Upload
+              <input type="file" id="c-capa-upload" accept="image/*" style="display:none;"
+                     onchange="uploadCapaLivro('c-capa-upload','c-capa')">
+            </label>
           </div>
+          <p style="font-family:'Inter',sans-serif;font-size:0.68rem;color:var(--gray-400);margin-top:0.3rem;">
+            Cole uma URL, busque via Google Books, ou envie uma imagem do seu dispositivo (máx. 2MB).
+          </p>
         </div>
 
         <div class="form-col-2">
