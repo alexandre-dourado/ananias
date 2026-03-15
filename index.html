@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Gestão de biblioteca pessoal com IA generativa — BiblioA">
+  <meta name="theme-color" content="#1e3a5f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BiblioA">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Biblioteca de Ananias">
+  <meta property="og:description" content="Gestão de biblioteca pessoal com IA generativa">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="icons/icon-512.png">
+
+  <title>Biblioteca de Ananias</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="icons/icon-144.png">
+  <link rel="apple-touch-icon" sizes="128x128" href="icons/icon-128.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-96.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-72.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============================================================
+     LOADING OVERLAY
+============================================================ -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <p id="loading-text">Carregando BiblioA...</p>
+</div>
+
+<!-- ============================================================
+     BANNER
+============================================================ -->
+<header id="banner" role="banner">
+  <div class="banner-left">
+    <span class="livros-badge" id="banner-badge">
+      <i data-lucide="library" style="width:11px;height:11px;"></i>
+      <span id="banner-count">—</span>
+    </span>
+    <span class="sync-indicator sync-syncing" id="sync-status">
+      <i data-lucide="loader-2" style="width:11px;height:11px;animation:spin 1s linear infinite;"></i>
+      <span>A sincronizar...</span>
+    </span>
+  </div>
+  <h1>BIBLIOTECA<br>DE ANANIAS</h1>
+</header>
+
+<!-- ============================================================
+     NAVEGAÇÃO
+============================================================ -->
+<nav id="nav" role="navigation" aria-label="Navegação principal">
+  <button class="tab-btn active" data-tab="cadastro" onclick="setTab('cadastro')" aria-label="Aba Cadastro">
+    <i data-lucide="plus-circle"></i><span class="tab-label">Cadastro</span>
+  </button>
+  <button class="tab-btn" data-tab="lista" onclick="setTab('lista')" aria-label="Aba Lista">
+    <i data-lucide="library"></i>
+    <span class="tab-label"><span id="tab-lista-label">Lista</span></span>
+  </button>
+  <button class="tab-btn" data-tab="recomendacoes" onclick="setTab('recomendacoes')" aria-label="Aba Recomendações">
+    <i data-lucide="zap"></i><span class="tab-label">Recomendações</span>
+  </button>
+  <button class="tab-btn" data-tab="ananias" onclick="setTab('ananias')" aria-label="Aba ANANIAS">
+    <i data-lucide="brain"></i><span class="tab-label">A.N.A.N.I.A.S.</span>
+  </button>
+  <button class="tab-btn" data-tab="categorias" onclick="setTab('categorias')" aria-label="Aba Categorias">
+    <i data-lucide="tags"></i><span class="tab-label">Categorias</span>
+  </button>
+  <button class="tab-btn" data-tab="config" onclick="setTab('config'); carregarConfig();" aria-label="Aba Configurações">
+    <i data-lucide="settings-2"></i><span class="tab-label">Config</span>
+  </button>
+</nav>
+
+<!-- ============================================================
+     TOAST CONTAINER
+============================================================ -->
+<div id="toast-container" role="alert" aria-live="polite"></div>
+
+<!-- ============================================================
+     MODAL CONFIABILIDADE (ANANIAS)
+============================================================ -->
+<div id="reliability-modal" onclick="this.classList.remove('visible')" role="dialog" aria-modal="true">
+  <h1>NÃO.</h1>
+</div>
+
+<!-- ============================================================
+     MODAL EDITAR LIVRO
+============================================================ -->
+<div id="modal-editar" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-editar-title">
+  <div class="modal-box">
+    <h3 id="modal-editar-title">
+      <i data-lucide="pencil"></i> Editar Livro
+    </h3>
+    <div class="form-edit-grid" id="edit-form-container"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-editar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdicao()">
+        <i data-lucide="save"></i> Salvar Alterações
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL CONFIRMAR DELEÇÃO
+============================================================ -->
+<div id="modal-deletar" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div class="modal-box" style="max-width:420px; text-align:center;">
+    <div style="color:var(--red-600); display:flex; justify-content:center; margin-bottom:0.75rem;">
+      <i data-lucide="trash-2" style="width:42px; height:42px;"></i>
+    </div>
+    <h3 style="justify-content:center; margin-bottom:0.5rem;">Confirmar Deleção</h3>
+    <p style="font-size:1rem; color:var(--gray-500); margin-bottom:0.5rem;">
+      Tem certeza que deseja deletar permanentemente
+    </p>
+    <p id="modal-deletar-titulo" style="font-family:'Playfair Display',serif; font-weight:700; color:var(--red-600); font-size:1.05rem; margin-bottom:1.5rem;"></p>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-deletar')">Cancelar</button>
+      <button class="btn btn-red" onclick="confirmarDelecao()">
+        <i data-lucide="trash-2"></i> Deletar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL DETALHE DO LIVRO
+============================================================ -->
+<div id="modal-detalhe" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div class="modal-box" style="max-width:560px;">
+    <div style="display:flex; gap:1.25rem; align-items:flex-start; flex-wrap:wrap;">
+      <div id="detalhe-capa" style="width:110px; flex-shrink:0;"></div>
+      <div style="flex:1; min-width:200px;">
+        <h3 id="detalhe-titulo" style="margin-bottom:0.2rem; font-size:1.35rem;"></h3>
+        <p id="detalhe-autor" style="font-size:1.05rem; color:var(--gray-500); margin:0 0 0.7rem;"></p>
+        <div id="detalhe-meta" style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:0.7rem;"></div>
+        <p id="detalhe-assunto" style="font-family:'Inter',sans-serif; font-size:0.8rem; color:var(--gray-400);"></p>
+        <p id="detalhe-obs" style="font-style:italic; font-size:0.95rem; color:var(--gray-700); margin-top:0.5rem;"></p>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe')">Fechar</button>
+      <button class="btn btn-outline" id="detalhe-btn-editar">
+        <i data-lucide="pencil"></i> Editar
+      </button>
+      <button class="btn btn-red" id="detalhe-btn-deletar">
+        <i data-lucide="trash-2"></i> Deletar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     PWA INSTALL BANNER
+============================================================ -->
+<div id="pwa-install-banner">
+  <p>📚 <strong>BiblioA</strong> pode ser instalada no seu dispositivo como app!</p>
+  <div style="display:flex; gap:0.5rem;">
+    <button class="btn btn-gold" id="pwa-install-btn" style="font-size:0.78rem;">
+      <i data-lucide="download"></i> Instalar
+    </button>
+    <button class="btn btn-ghost" id="pwa-dismiss-btn"
+      onclick="document.getElementById('pwa-install-banner').classList.remove('visible'); localStorage.setItem('pwa_dismissed','1');"
+      style="font-size:0.78rem; color:#fff; border-color:rgba(255,255,255,0.3);">
+      Agora não
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================
+     CONTEÚDO PRINCIPAL
+============================================================ -->
+<main id="main-content">
+
+  <!-- ==================== ABA: CADASTRO ==================== -->
+  <div id="tab-cadastro" class="tab-content" style="display:block;">
+    <div class="card">
+      <h2><i data-lucide="plus-circle"></i> Cadastrar Novo Livro</h2>
+      <div class="form-grid">
+
+        <div class="form-col-2">
+          <label><i data-lucide="type"></i> Título (Obrigatório)</label>
+          <input type="text" id="c-titulo" placeholder="Ex: O Nome do Vento"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('c-autor').focus();}">
+        </div>
+
+        <div>
+          <label><i data-lucide="user"></i> Autor(a) (Obrigatório)</label>
+          <input type="text" id="c-autor" placeholder="Ex: Patrick Rothfuss">
+        </div>
+
+        <div>
+          <label><i data-lucide="layers"></i> Categoria</label>
+          <select id="c-categoria">
+            <option value="" disabled selected>Selecione a Categoria</option>
+          </select>
+        </div>
+
+        <div>
+          <label><i data-lucide="briefcase"></i> Assunto (Opcional)</label>
+          <input type="text" id="c-assunto" placeholder="Ex: Fantasia Épica">
+        </div>
+
+        <div>
+          <label><i data-lucide="building-2"></i> Editora (Opcional)</label>
+          <input type="text" id="c-editora" placeholder="Ex: HarperCollins">
+        </div>
+
+        <div>
+          <label><i data-lucide="calendar"></i> Ano de Publicação (Opcional)</label>
+          <input type="number" id="c-ano" placeholder="Ex: 2007" min="1000" max="2030">
+        </div>
+
+        <div class="form-col-2">
+          <label><i data-lucide="image"></i> URL da Capa (Opcional)</label>
+          <div class="input-group">
+            <input type="url" id="c-capa" placeholder="https://... ou clique em buscar →">
+            <button class="btn btn-ghost" onclick="buscarCapaAutomatica()" title="Buscar capa via Google Books" style="flex-shrink:0; white-space:nowrap;">
+              <i data-lucide="search"></i> Buscar Capa
+            </button>
+          </div>
+        </div>
+
+        <div class="form-col-2">
+          <label><i data-lucide="message-square"></i> Observações (Opcional)</label>
+          <textarea id="c-observacoes" rows="3" placeholder="Ex: Emprestado para o João. 1ª edição autografada."></textarea>
+        </div>
+
+        <div class="form-col-2">
+          <button class="btn btn-primary btn-full" onclick="cadastrarLivro()" style="padding:0.85rem;">
+            <i data-lucide="book-open"></i> Cadastrar Livro
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Últimos 10 livros -->
+    <div class="card">
+      <h2><i data-lucide="clock"></i> Últimos 10 Cadastrados</h2>
+      <div class="table-wrapper table-wrapper-mini">
+        <table>
+          <thead>
+            <tr>
+              <th>Título</th>
+              <th class="hide-sm">Autor</th>
+              <th class="hide-md">Categoria</th>
+              <th style="text-align:right; width:80px;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="ultimos-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ABA: LISTA ==================== -->
+  <div id="tab-lista" class="tab-content" style="display:none;">
+    <div class="card">
+
+      <!-- Cabeçalho -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.1rem; flex-wrap:wrap; gap:0.65rem;">
+        <h2 style="margin:0;">
+          <i data-lucide="library"></i>
+          Catálogo Completo
+          <span id="lista-count" class="badge badge-navy" style="vertical-align:middle; margin-left:0.4rem;"></span>
+        </h2>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+          <div class="view-toggle">
+            <button id="view-list-btn" class="active" onclick="setView('list')" title="Vista em Lista">
+              <i data-lucide="rows-3"></i> Lista
+            </button>
+            <button id="view-grid-btn" onclick="setView('grid')" title="Vista em Grade">
+              <i data-lucide="layout-grid"></i> Grade
+            </button>
+          </div>
+          <button class="btn btn-ghost" onclick="exportarCSV()" title="Exportar CSV">
+            <i data-lucide="download"></i><span class="hide-sm" style="margin-left:0.3rem;">Exportar</span>
+          </button>
+          <button class="btn btn-outline" onclick="document.getElementById('import-file').click()" title="Importar CSV">
+            <i data-lucide="upload"></i><span class="hide-sm" style="margin-left:0.3rem;">Importar</span>
+          </button>
+          <input type="file" id="import-file" accept=".csv" style="display:none;" onchange="importarCSV(event)">
+          <button class="btn btn-ghost" onclick="carregarLivros()" title="Recarregar dados">
+            <i data-lucide="refresh-cw"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Busca + Ordenação -->
+      <div class="lista-toolbar">
+        <div class="lista-toolbar-left">
+          <div class="search-wrapper" style="flex:1;">
+            <i data-lucide="search"></i>
+            <input type="search" id="busca-input"
+                   placeholder="Buscar por título, autor, categoria, assunto..."
+                   oninput="filtrarLivros()">
+          </div>
+        </div>
+        <div class="lista-toolbar-right">
+          <select id="sort-select" onchange="filtrarLivros()"
+                  style="font-family:'Inter',sans-serif; font-size:0.78rem; padding:0.5rem 2rem 0.5rem 0.75rem; min-width:160px;">
+            <option value="dataCadastro-desc">Mais Recente</option>
+            <option value="dataCadastro-asc">Mais Antigo</option>
+            <option value="titulo-asc">Título A → Z</option>
+            <option value="titulo-desc">Título Z → A</option>
+            <option value="autor-asc">Autor A → Z</option>
+            <option value="anoPublicacao-asc">Ano ↑</option>
+            <option value="anoPublicacao-desc">Ano ↓</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Vista Lista -->
+      <div id="view-list" class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Título</th>
+              <th class="hide-sm">Autor</th>
+              <th class="hide-md">Categoria</th>
+              <th class="hide-md">Editora</th>
+              <th class="hide-lg">Assunto</th>
+              <th class="hide-xl center">Ano</th>
+              <th style="text-align:right; width:80px;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="lista-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Vista Grade -->
+      <div id="view-grid" style="display:none;">
+        <div id="grid-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ABA: RECOMENDAÇÕES ==================== -->
+  <div id="tab-recomendacoes" class="tab-content" style="display:none;">
+    <div class="card card-green">
+      <h2 style="color:var(--green-700);">
+        <i data-lucide="zap" style="color:var(--green-600);"></i>
+        Gerador de Recomendações com IA
+      </h2>
+      <p style="font-size:1.05rem; color:var(--gray-500); margin-bottom:1.1rem; max-width:640px;">
+        Selecione os livros que representam o seu gosto actual. A IA irá analisar os títulos, autores e temas para sugerir um livro que irá adorar.
+      </p>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.85rem; padding-bottom:0.85rem; border-bottom:1px solid var(--gray-200); flex-wrap:wrap; gap:0.65rem;">
+        <span id="rec-count" style="font-family:'Inter',sans-serif; font-size:0.85rem; font-weight:600; color:var(--gray-500);">0 livros seleccionados</span>
+        <button class="btn btn-green" onclick="gerarRecomendacao()" id="btn-gerar-rec" disabled>
+          <i data-lucide="zap"></i> Gerar Recomendação
+        </button>
+      </div>
+
+      <!-- Tabela de seleção -->
+      <div class="table-wrapper" style="max-height:36vh; margin-bottom:1.5rem;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40px; text-align:center;">Sel.</th>
+              <th>Título</th>
+              <th class="hide-sm">Autor</th>
+              <th class="hide-md">Categoria</th>
+            </tr>
+          </thead>
+          <tbody id="rec-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Resultado -->
+      <div>
+        <h3 style="font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; color:var(--navy-800); margin-bottom:0.75rem; display:flex; align-items:center; gap:0.4rem;">
+          <i data-lucide="book-open" style="width:18px;height:18px;"></i> Recomendação Exclusiva
+        </h3>
+        <div id="rec-result" class="md-output" style="background:var(--gray-50); padding:1.25rem; border-radius:var(--radius-sm); min-height:72px;">
+          <p style="color:var(--gray-400); font-style:italic;">Selecione livros acima e clique em &ldquo;Gerar Recomendação&rdquo;.</p>
+        </div>
+        <div id="rec-sources"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ABA: A.N.A.N.I.A.S. ==================== -->
+  <div id="tab-ananias" class="tab-content" style="display:none;">
+    <!-- Header -->
+    <div class="ananias-header">
+      <img src="https://i.ibb.co/qYFVxhkm/image.png" alt="A.N.A.N.I.A.S." class="ananias-avatar">
+      <div class="ananias-text">
+        <h2>A.N.A.N.I.A.S.</h2>
+        <p class="sub">Aprendizado Neural para Análise e Integração de Síntese</p>
+        <blockquote>
+          "Meu pai me ensinou a ler o mundo; eu ensinei uma IA a lê-lo por nós.<br>
+          De pai para filho, de humano para máquina, de sabedoria para síntese."
+        </blockquote>
+      </div>
+    </div>
+
+    <div class="card card-gold">
+      <h2><i data-lucide="brain" style="color:var(--gold-500);"></i> Gerar Síntese da Obra</h2>
+
+      <div style="display:grid; grid-template-columns:1fr auto; gap:0.75rem; align-items:flex-end; margin-bottom:1.25rem;">
+        <div>
+          <label><i data-lucide="book"></i> Selecione um Livro da Biblioteca</label>
+          <select id="ananias-select">
+            <option value="" disabled selected>Escolha um livro para resumir...</option>
+          </select>
+        </div>
+        <button class="btn btn-gold" onclick="gerarResumoAnanias()" id="btn-gerar-resumo"
+                style="align-self:flex-end; white-space:nowrap;">
+          <i data-lucide="brain"></i> Gerar Resumo
+        </button>
+      </div>
+
+      <!-- Resultado -->
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--gray-200); padding-bottom:0.6rem; margin-bottom:0.85rem;">
+          <h3 style="font-family:'Playfair Display',serif; font-size:1.05rem; font-weight:700; color:var(--navy-800); margin:0; display:flex; align-items:center; gap:0.4rem;">
+            <i data-lucide="book-open" style="width:16px;height:16px;"></i> Síntese da Obra
+          </h3>
+          <button
+            onclick="document.getElementById('reliability-modal').classList.add('visible')"
+            style="font-family:'Inter',sans-serif; font-size:0.7rem; color:var(--gray-400); background:none; border:none; cursor:pointer; display:flex; align-items:center; gap:0.3rem;"
+            onmouseover="this.style.color='var(--navy-800)'" onmouseout="this.style.color='var(--gray-400)'">
+            <i data-lucide="alert-octagon" style="width:12px;height:12px;"></i>
+            aviso: esse resumo é confiável?
+          </button>
+        </div>
+
+        <div id="ananias-result" class="md-output"
+             style="background:var(--gray-50); padding:1.25rem; border-radius:var(--radius-sm); min-height:72px;">
+          <p style="color:var(--gray-400); font-style:italic;">Selecione um livro e clique em &ldquo;Gerar Resumo&rdquo;.</p>
+        </div>
+        <div id="ananias-sources"></div>
+
+        <div id="ananias-copy-btn" style="display:none; justify-content:flex-end; margin-top:0.85rem;">
+          <button class="btn btn-ghost" id="btn-copiar-resumo"
+                  onclick="copiarParaClipboard(APP.summaryText, 'btn-copiar-resumo')">
+            <i data-lucide="copy"></i> Copiar Resumo (Texto Limpo)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ABA: CATEGORIAS ==================== -->
+  <div id="tab-categorias" class="tab-content" style="display:none;">
+    <div class="card">
+      <h2><i data-lucide="tags"></i> Gerenciar Categorias</h2>
+      <p style="font-size:1rem; color:var(--gray-500); margin-bottom:1.1rem;">
+        Adicione, remova ou reordene as categorias.
+        Arraste pelo ícone <span style="display:inline-block; vertical-align:middle; font-size:1.1rem; color:var(--gray-400);">⠿</span> para reordenar.
+      </p>
+
+      <div class="input-group" style="margin-bottom:1rem;">
+        <input type="text" id="nova-cat-input" placeholder="Nome da nova categoria"
+               onkeydown="if(event.key==='Enter') adicionarCategoria()">
+        <button class="btn btn-primary" onclick="adicionarCategoria()" style="flex-shrink:0;">
+          <i data-lucide="plus"></i> Adicionar
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        <ul id="cat-list" role="list" style="list-style:none; margin:0; padding:0;"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ABA: CONFIGURAÇÕES ==================== -->
+  <div id="tab-config" class="tab-content" style="display:none;">
+    <div class="card card-config">
+      <h2><i data-lucide="settings-2"></i> Configurações</h2>
+
+      <!-- GAS URL -->
+      <div class="config-section">
+        <div class="config-section-header">
+          <i data-lucide="server" style="width:14px;height:14px;"></i>
+          Conexão com Google Apps Script
+        </div>
+        <div class="config-section-body">
+          <div>
+            <label><i data-lucide="link"></i> URL de Implementação do GAS</label>
+            <input type="url" id="config-gas-url"
+                   placeholder="https://script.google.com/macros/s/.../exec">
+            <p style="font-family:'Inter',sans-serif; font-size:0.72rem; color:var(--gray-400); margin-top:0.35rem;">
+              Obtenha esta URL em: Google Apps Script → Implementar → Gerir implementações → URL da aplicação web.
+            </p>
+          </div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="salvarConfig()">
+              <i data-lucide="save"></i> Guardar e Conectar
+            </button>
+            <button class="btn btn-ghost" onclick="testarConexao()" id="btn-testar">
+              <i data-lucide="wifi"></i> Testar Conexão
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div class="config-section">
+        <div class="config-section-header">
+          <i data-lucide="info" style="width:14px;height:14px;"></i>
+          Informações & Cache
+        </div>
+        <div class="config-section-body">
+          <div style="font-family:'Inter',sans-serif; font-size:0.82rem; color:var(--gray-500);">
+            <p><strong style="color:var(--navy-800);">Última sincronização:</strong> <span id="config-last-sync">—</span></p>
+            <p style="margin-top:0.4rem;"><strong style="color:var(--navy-800);">Livros em cache local:</strong> <span id="config-cache-count">—</span></p>
+            <p style="margin-top:0.4rem;"><strong style="color:var(--navy-800);">Versão do Service Worker:</strong> biblioa-v1</p>
+          </div>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button class="btn btn-ghost" onclick="limparCacheLocal()">
+              <i data-lucide="trash-2"></i> Limpar Cache Local
+            </button>
+            <button class="btn btn-ghost" onclick="exportarCSV()">
+              <i data-lucide="download"></i> Backup CSV
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sobre -->
+      <div class="config-section">
+        <div class="config-section-header">
+          <i data-lucide="book-open" style="width:14px;height:14px;"></i>
+          Sobre o BiblioA
+        </div>
+        <div class="config-section-body">
+          <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+            <img src="https://i.ibb.co/qYFVxhkm/image.png" alt="A.N.A.N.I.A.S."
+                 style="width:60px; height:60px; border-radius:50%; border:2px solid var(--navy-100);">
+            <div style="font-family:'Crimson Text',serif; font-size:1rem; color:var(--gray-700);">
+              <p><strong style="font-family:'Playfair Display',serif; color:var(--navy-800);">Biblioteca de Ananias v2.0</strong></p>
+              <p>Sistema de gestão de biblioteca pessoal com IA generativa.</p>
+              <p style="font-style:italic; color:var(--gray-400); font-size:0.9rem; margin-top:0.3rem;">
+                Backend: Google Apps Script + Google Sheets.<br>
+                IA: Google Gemini 2.5 Flash (chave gerida pelo GAS).
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main><!-- #main-content -->
+
+<!-- ============================================================
+     SCRIPTS
+============================================================ -->
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<!-- Módulos da app (ordem importa) -->
+<script src="js/db.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+
+<!-- PWA Install Prompt -->
+<script>
+  let deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const dismissed = localStorage.getItem('pwa_dismissed');
+    if (!dismissed) {
+      setTimeout(() => {
+        document.getElementById('pwa-install-banner').classList.add('visible');
+      }, 3000);
+    }
+  });
+
+  document.getElementById('pwa-install-btn').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      document.getElementById('pwa-install-banner').classList.remove('visible');
+      localStorage.setItem('pwa_dismissed', '1');
+    }
+    deferredPrompt = null;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('pwa-install-banner').classList.remove('visible');
+    mostrarToast && mostrarToast('BiblioA instalada com sucesso!', 'success');
+  });
+</script>
+
+<!-- Funções auxiliares Config -->
+<script>
+  async function testarConexao() {
+    const url = document.getElementById('config-gas-url')?.value.trim();
+    if (!url) { mostrarToast('Insira a URL primeiro.', 'info'); return; }
+
+    const btn = document.getElementById('btn-testar');
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" style="animation:spin 1s linear infinite;width:14px;height:14px;"></i> A testar...';
+    lucide.createIcons({ nodes: [btn] });
+
+    try {
+      const old = getGasUrl();
+      setGasUrl(url);
+      const res = await apiGetCategorias();
+      setGasUrl(old);
+
+      if (res.success) {
+        mostrarToast('Conexão bem-sucedida! ✓', 'success');
+      } else {
+        mostrarToast('GAS respondeu com erro: ' + res.error, 'error');
+      }
+    } catch(e) {
+      mostrarToast('Falha na conexão: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="wifi"></i> Testar Conexão';
+      lucide.createIcons({ nodes: [btn] });
+    }
+  }
+
+  function carregarConfig() {
+    const gasEl = document.getElementById('config-gas-url');
+    if (gasEl) gasEl.value = getGasUrl();
+
+    const lastSync = getLastSync();
+    const syncEl   = document.getElementById('config-last-sync');
+    if (syncEl) syncEl.textContent = lastSync
+      ? new Date(lastSync).toLocaleString('pt-BR')
+      : 'Nunca';
+
+    getCachedLivros().then(l => {
+      const el = document.getElementById('config-cache-count');
+      if (el) el.textContent = l.length + ' livro(s)';
+    });
+  }
+
+  // Actualiza contador do banner
+  document.addEventListener('DOMContentLoaded', () => {
+    const bannerCount = document.getElementById('banner-count');
+    if (bannerCount) {
+      const update = () => {
+        bannerCount.textContent = APP?.livros?.length
+          ? `${APP.livros.length} livro${APP.livros.length !== 1 ? 's' : ''}`
+          : '—';
+      };
+      setInterval(update, 1000);
+    }
+  });
+</script>
+
+</body>
+</html>
