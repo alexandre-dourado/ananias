@@ -86,6 +86,9 @@
   <button class="tab-btn" data-tab="categorias" onclick="setTab('categorias')" aria-label="Aba Categorias">
     <i data-lucide="tags"></i><span class="tab-label">Categorias</span>
   </button>
+  <button class="tab-btn" data-tab="estantes" onclick="setTab('estantes')" aria-label="Aba Estantes">
+    <i data-lucide="library"></i><span class="tab-label">Estantes</span>
+  </button>
   <button class="tab-btn" data-tab="config" onclick="setTab('config'); carregarConfig();" aria-label="Aba Configurações">
     <i data-lucide="settings-2"></i><span class="tab-label">Config</span>
   </button>
@@ -193,7 +196,7 @@
 <main id="main-content">
 
   <!-- ==================== ABA: CADASTRO ==================== -->
-  <div id="tab-cadastro" class="tab-content" style="display:block;">
+  <div id="tab-cadastro" class="tab-content" style="display:block; opacity:1;">
     <div class="card">
       <h2><i data-lucide="plus-circle"></i> Cadastrar Novo Livro</h2>
       <div class="form-grid">
@@ -486,6 +489,65 @@
     </div>
   </div>
 
+  <!-- ==================== ABA: ESTANTES ==================== -->
+  <div id="tab-estantes" class="tab-content" style="display:none;">
+
+    <!-- Vista Galeria -->
+    <div id="estantes-galeria-view">
+      <div class="card" style="border-top-color:var(--gold-400);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.65rem;">
+          <h2 style="margin:0;color:var(--gold-600);">
+            <i data-lucide="library" style="color:var(--gold-500);"></i>
+            Minhas Estantes
+          </h2>
+          <button class="btn btn-gold" onclick="abrirModalCriarEstante()">
+            <i data-lucide="plus"></i> Nova Estante
+          </button>
+        </div>
+        <p style="font-size:1rem;color:var(--gray-500);margin-bottom:1.25rem;">
+          Organize os seus livros, notas, links e ficheiros em estantes personalizadas.
+          Cada estante tem uma pasta dedicada no seu Google Drive.
+        </p>
+        <div id="estantes-galeria"></div>
+      </div>
+    </div>
+
+    <!-- Vista Interior da Estante -->
+    <div id="estante-interior-view">
+      <!-- Breadcrumb -->
+      <div class="estante-breadcrumb">
+        <a onclick="voltarGaleriaEstantes()">
+          <i data-lucide="library" style="width:12px;height:12px;"></i>
+          Estantes
+        </a>
+        <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+        <span id="estante-breadcrumb-nome"></span>
+      </div>
+
+      <!-- Header da Estante -->
+      <div class="estante-interior-header card" id="estante-interior-header"
+           style="border-top:none; background:var(--navy-800);">
+        <div>
+          <h2 id="estante-interior-title" style="color:#fff;margin:0;"></h2>
+          <p id="estante-interior-desc" style="color:rgba(255,255,255,0.65);"></p>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn" onclick="abrirModalAdicionarItem()"
+                  style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);">
+            <i data-lucide="plus"></i> Adicionar Item
+          </button>
+          <button class="btn" onclick="voltarGaleriaEstantes()"
+                  style="background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.2);">
+            <i data-lucide="arrow-left"></i> Voltar
+          </button>
+        </div>
+      </div>
+
+      <!-- Itens -->
+      <div id="itens-container"></div>
+    </div>
+  </div>
+
   <!-- ==================== ABA: CONFIGURAÇÕES ==================== -->
   <div id="tab-config" class="tab-content" style="display:none;">
     <div class="card card-config">
@@ -567,6 +629,112 @@
 </main><!-- #main-content -->
 
 <!-- ============================================================
+     MODAL CRIAR/EDITAR ESTANTE
+============================================================ -->
+<div id="modal-estante" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div class="modal-box" style="max-width:500px;">
+    <h3 id="modal-estante-title">
+      <i data-lucide="library"></i> Nova Estante
+    </h3>
+
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <input type="hidden" id="estante-form-id">
+
+      <div>
+        <label><i data-lucide="type"></i> Nome da Estante</label>
+        <input type="text" id="estante-form-nome" placeholder="Ex: Filosofia Clássica, A Ler, Favoritos...">
+      </div>
+
+      <div>
+        <label><i data-lucide="align-left"></i> Descrição (Opcional)</label>
+        <input type="text" id="estante-form-desc" placeholder="Ex: Livros e notas de filosofia grega">
+      </div>
+
+      <div>
+        <label><i data-lucide="palette"></i> Cor da Estante</label>
+        <div class="cor-selector" id="estante-cores"></div>
+      </div>
+
+      <div>
+        <label><i data-lucide="smile"></i> Ícone</label>
+        <div class="icone-selector" id="estante-icones"></div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-estante')">Cancelar</button>
+      <button class="btn btn-gold" onclick="salvarEstante()">
+        <i data-lucide="save"></i> Guardar Estante
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL ADICIONAR/EDITAR ITEM
+============================================================ -->
+<div id="modal-item" class="modal-backdrop" role="dialog" aria-modal="true">
+  <div class="modal-box" style="max-width:520px;">
+    <h3 id="modal-item-title">
+      <i data-lucide="plus-circle"></i> Adicionar Item
+    </h3>
+
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <input type="hidden" id="item-form-id">
+
+      <div>
+        <label><i data-lucide="layers"></i> Tipo de Item</label>
+        <select id="item-form-tipo" onchange="_actualizarCamposItemPorTipo(this.value)">
+          <option value="nota">📝 Nota de Texto</option>
+          <option value="link">🔗 Link / URL</option>
+          <option value="ficheiro">📎 Ficheiro (PDF, imagem...)</option>
+          <option value="livro">📖 Livro do Acervo</option>
+        </select>
+      </div>
+
+      <div>
+        <label><i data-lucide="type"></i> Título</label>
+        <input type="text" id="item-form-titulo" placeholder="Nome ou título do item">
+      </div>
+
+      <!-- Campos condicionais por tipo -->
+      <div id="campo-conteudo">
+        <label><i data-lucide="file-text"></i> Conteúdo da Nota</label>
+        <textarea id="item-form-conteudo" rows="6"
+                  placeholder="Cole texto, transcrições, anotações, excertos..."></textarea>
+      </div>
+
+      <div id="campo-url" style="display:none;">
+        <label><i data-lucide="link"></i> URL</label>
+        <input type="url" id="item-form-url" placeholder="https://...">
+      </div>
+
+      <div id="campo-ficheiro" style="display:none;">
+        <label><i data-lucide="upload"></i> Ficheiro (máx. 5MB)</label>
+        <input type="file" id="item-form-file" accept=".pdf,.txt,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp">
+        <p style="font-family:'Inter',sans-serif;font-size:0.7rem;color:var(--gray-400);margin-top:0.3rem;">
+          O ficheiro será guardado na pasta da estante no seu Google Drive.
+        </p>
+      </div>
+
+      <div id="campo-livro" style="display:none;">
+        <label><i data-lucide="book-open"></i> Selecionar Livro do Acervo</label>
+        <select id="item-form-livro-sel">
+          <option value="">Selecione um livro...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-item')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarItem()">
+        <i data-lucide="save"></i> Guardar Item
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
      SCRIPTS
 ============================================================ -->
 <!-- Lucide Icons -->
@@ -578,6 +746,7 @@
 <script src="js/ai.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
+<script src="js/estantes.js"></script>
 
 <!-- PWA Install Prompt -->
 <script>
@@ -611,66 +780,7 @@
   });
 </script>
 
-<!-- Funções auxiliares Config -->
-<script>
-  async function testarConexao() {
-    const url = document.getElementById('config-gas-url')?.value.trim();
-    if (!url) { mostrarToast('Insira a URL primeiro.', 'info'); return; }
 
-    const btn = document.getElementById('btn-testar');
-    btn.disabled = true;
-    btn.innerHTML = '<i data-lucide="loader-2" style="animation:spin 1s linear infinite;width:14px;height:14px;"></i> A testar...';
-    lucide.createIcons({ nodes: [btn] });
-
-    try {
-      const old = getGasUrl();
-      setGasUrl(url);
-      const res = await apiGetCategorias();
-      setGasUrl(old);
-
-      if (res.success) {
-        mostrarToast('Conexão bem-sucedida! ✓', 'success');
-      } else {
-        mostrarToast('GAS respondeu com erro: ' + res.error, 'error');
-      }
-    } catch(e) {
-      mostrarToast('Falha na conexão: ' + e.message, 'error');
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = '<i data-lucide="wifi"></i> Testar Conexão';
-      lucide.createIcons({ nodes: [btn] });
-    }
-  }
-
-  function carregarConfig() {
-    const gasEl = document.getElementById('config-gas-url');
-    if (gasEl) gasEl.value = getGasUrl();
-
-    const lastSync = getLastSync();
-    const syncEl   = document.getElementById('config-last-sync');
-    if (syncEl) syncEl.textContent = lastSync
-      ? new Date(lastSync).toLocaleString('pt-BR')
-      : 'Nunca';
-
-    getCachedLivros().then(l => {
-      const el = document.getElementById('config-cache-count');
-      if (el) el.textContent = l.length + ' livro(s)';
-    });
-  }
-
-  // Actualiza contador do banner
-  document.addEventListener('DOMContentLoaded', () => {
-    const bannerCount = document.getElementById('banner-count');
-    if (bannerCount) {
-      const update = () => {
-        bannerCount.textContent = APP?.livros?.length
-          ? `${APP.livros.length} livro${APP.livros.length !== 1 ? 's' : ''}`
-          : '—';
-      };
-      setInterval(update, 1000);
-    }
-  });
-</script>
 
 </body>
 </html>

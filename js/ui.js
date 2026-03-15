@@ -1,10 +1,10 @@
 // ============================================================
 // ui.js — Componentes de UI reutilizáveis
-// Loading, toasts, modais, tabela, grade, markdown
+// Versão corrigida: banner-count, lista-count, setTab, toasts
 // ============================================================
 
 // ============================================================
-// UTILITÁRIO: ESCAPE HTML
+// ESCAPE HTML
 // ============================================================
 function esc(str) {
   if (str === null || str === undefined) return '';
@@ -24,14 +24,16 @@ let _loadingCount = 0;
 function mostrarLoading(msg) {
   _loadingCount++;
   const overlay = document.getElementById('loading-overlay');
-  document.getElementById('loading-text').textContent = msg || 'Aguarde...';
-  overlay.classList.add('visible');
+  const text    = document.getElementById('loading-text');
+  if (text)    text.textContent = msg || 'Aguarde...';
+  if (overlay) overlay.classList.add('visible');
 }
 
 function ocultarLoading() {
   _loadingCount = Math.max(0, _loadingCount - 1);
   if (_loadingCount === 0) {
-    document.getElementById('loading-overlay').classList.remove('visible');
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.classList.remove('visible');
   }
 }
 
@@ -40,15 +42,24 @@ function ocultarLoading() {
 // ============================================================
 function mostrarToast(mensagem, tipo = 'info', duracao = 4000) {
   const container = document.getElementById('toast-container');
-  const toast     = document.createElement('div');
+  if (!container) return;
+
+  const toast = document.createElement('div');
   toast.className = `toast toast-${tipo}`;
 
-  const icons = { success: 'check-circle', error: 'alert-circle', info: 'info', warning: 'alert-triangle' };
+  const icons = {
+    success:  'check-circle',
+    error:    'alert-circle',
+    info:     'info',
+    warning:  'alert-triangle'
+  };
+
   toast.innerHTML = `
-    <i data-lucide="${icons[tipo] || 'info'}"></i>
-    <span>${esc(mensagem)}</span>
-    <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;padding:0;margin-left:auto;opacity:0.5;">
-      <i data-lucide="x" style="width:14px;height:14px;"></i>
+    <i data-lucide="${icons[tipo] || 'info'}" style="width:15px;height:15px;flex-shrink:0;"></i>
+    <span style="flex:1;">${esc(mensagem)}</span>
+    <button onclick="this.parentElement.remove()"
+      style="background:none;border:none;cursor:pointer;padding:0;opacity:0.5;line-height:1;">
+      <i data-lucide="x" style="width:13px;height:13px;"></i>
     </button>
   `;
   container.appendChild(toast);
@@ -56,7 +67,7 @@ function mostrarToast(mensagem, tipo = 'info', duracao = 4000) {
 
   setTimeout(() => {
     toast.classList.add('toast-exit');
-    setTimeout(() => toast.remove(), 300);
+    setTimeout(() => { if (toast.parentElement) toast.remove(); }, 320);
   }, duracao);
 }
 
@@ -64,40 +75,132 @@ function mostrarToast(mensagem, tipo = 'info', duracao = 4000) {
 // NAVEGAÇÃO POR ABAS
 // ============================================================
 function setTab(tabName) {
+  // Oculta todos os conteúdos
   document.querySelectorAll('.tab-content').forEach(t => {
-    t.style.display   = 'none';
-    t.style.opacity   = '0';
+    t.style.display = 'none';
+    t.style.opacity = '0';
   });
+
+  // Remove activo de todos os botões
   document.querySelectorAll('.tab-btn').forEach(b => {
     b.classList.remove('active', 'active-green', 'active-gold');
   });
 
+  // Mostra a aba seleccionada
   const tabEl = document.getElementById('tab-' + tabName);
   if (tabEl) {
     tabEl.style.display = 'block';
-    requestAnimationFrame(() => { tabEl.style.opacity = '1'; });
+    // Força reflow para a transição funcionar
+    void tabEl.offsetHeight;
+    tabEl.style.opacity = '1';
   }
 
+  // Activa o botão correcto
   const btn = document.querySelector(`[data-tab="${tabName}"]`);
   if (btn) {
-    if (tabName === 'recomendacoes') btn.classList.add('active-green');
-    else if (tabName === 'ananias')  btn.classList.add('active-gold');
-    else btn.classList.add('active');
+    if      (tabName === 'recomendacoes') btn.classList.add('active-green');
+    else if (tabName === 'ananias')       btn.classList.add('active-gold');
+    else                                  btn.classList.add('active');
   }
 
-  // Acções especiais por aba
-  if (tabName === 'lista')       renderizarListaCompleta();
+  // Acções especiais ao entrar em cada aba
+  if (tabName === 'lista')         renderizarListaCompleta();
   if (tabName === 'recomendacoes') popularTabRec();
-  if (tabName === 'categorias')  renderizarCategorias();
+  if (tabName === 'categorias')    renderizarCategorias();
+  if (tabName === 'estantes')      inicializarEstantes();
 
+  // Actualiza ícones Lucide nos novos elementos visíveis
   lucide.createIcons();
 
-  // Guarda aba activa na URL (para deep linking)
+  // Deep linking via hash
   history.replaceState(null, '', `#${tabName}`);
 }
 
 // ============================================================
-// RENDERIZAR TABELA PRINCIPAL (Lista)
+// CONTADORES / BADGES
+// ============================================================
+function actualizarContadores() {
+  const total     = APP.livros.length;
+  const filtrados = APP.livrosFiltrados.length;
+
+  // Banner: span interno banner-count
+  const bannerCount = document.getElementById('banner-count');
+  if (bannerCount) {
+    bannerCount.textContent = `${total} livro${total !== 1 ? 's' : ''}`;
+  }
+
+  // Label da aba lista
+  const tabLabel = document.getElementById('tab-lista-label');
+  if (tabLabel) tabLabel.textContent = `Lista (${total})`;
+
+  // Contador de resultados na lista
+  const listaCount = document.getElementById('lista-count');
+  if (listaCount) listaCount.textContent = filtrados;
+}
+
+// ============================================================
+// STATUS DE SINCRONIZAÇÃO
+// ============================================================
+function mostrarStatusSync(estado) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+
+  const configs = {
+    syncing: { icon: 'loader-2',    text: 'A sincronizar...', cls: 'sync-syncing', spin: true  },
+    ok:      { icon: 'cloud-check', text: 'Sincronizado',     cls: 'sync-ok',      spin: false },
+    offline: { icon: 'cloud-off',   text: 'Offline',          cls: 'sync-offline', spin: false },
+    error:   { icon: 'cloud-x',     text: 'Erro de sync',     cls: 'sync-error',   spin: false },
+  };
+
+  const cfg = configs[estado] || configs.offline;
+  el.className = `sync-indicator ${cfg.cls}`;
+  el.innerHTML = `
+    <i data-lucide="${cfg.icon}"
+       style="width:11px;height:11px;${cfg.spin ? 'animation:spin 1s linear infinite;' : ''}"></i>
+    <span>${cfg.text}</span>
+  `;
+  lucide.createIcons({ nodes: [el] });
+}
+
+// ============================================================
+// DROPDOWNS
+// ============================================================
+function popularDropdowns() {
+  const sel = document.getElementById('c-categoria');
+  if (!sel) return;
+
+  const prev = sel.value;
+  sel.innerHTML = '<option value="" disabled>Selecione a Categoria</option>';
+  APP.categorias.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value       = cat;
+    opt.textContent = cat;
+    if (cat === prev) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function popularSelectAnanias() {
+  const sel = document.getElementById('ananias-select');
+  if (!sel) return;
+
+  const prev = sel.value;
+  sel.innerHTML = '<option value="" disabled selected>Escolha um livro para resumir...</option>';
+
+  // Ordenado alfabeticamente pelo título
+  [...APP.livros]
+    .sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'))
+    .forEach(l => {
+      const opt = document.createElement('option');
+      opt.value       = l.id;
+      opt.textContent = `${l.titulo} — ${l.autor}`;
+      if (l.id === prev) opt.selected = true;
+      sel.appendChild(opt);
+    });
+}
+
+// ============================================================
+// RENDERIZAR TABELA PRINCIPAL
 // ============================================================
 function renderizarTabela(dados, tbodyId) {
   const tbody = document.getElementById(tbodyId || 'lista-tbody');
@@ -107,9 +210,9 @@ function renderizarTabela(dados, tbodyId) {
   if (dados.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" style="text-align:center; padding:2rem; color:#94a3b8;">
+        <td colspan="7" style="text-align:center; padding:2.5rem 1rem;">
           <div class="empty-inline">
-            <i data-lucide="book-x" style="width:36px;height:36px;opacity:0.3;"></i>
+            <i data-lucide="book-x"></i>
             <p>Nenhum livro encontrado.</p>
           </div>
         </td>
@@ -118,38 +221,47 @@ function renderizarTabela(dados, tbodyId) {
     return;
   }
 
+  const fragment = document.createDocumentFragment();
+
   dados.forEach(livro => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="td-title">
         ${livro.capaURL
-          ? `<img src="${esc(livro.capaURL)}" class="table-thumb" alt="" loading="lazy" onerror="this.style.display='none'">`
-          : `<span class="table-thumb-placeholder"></span>`
-        }
-        <span class="td-title-text">${esc(livro.titulo)}</span>
+          ? `<img src="${esc(livro.capaURL)}" class="table-thumb" alt="" loading="lazy"
+                  onerror="this.style.display='none'">`
+          : `<span class="table-thumb-placeholder"></span>`}
+        <span class="td-title-text" title="${esc(livro.titulo)}">${esc(livro.titulo)}</span>
       </td>
       <td class="muted hide-sm">${esc(livro.autor)}</td>
-      <td class="hide-md"><span class="badge badge-navy">${esc(livro.categoria) || '—'}</span></td>
+      <td class="hide-md">
+        <span class="badge badge-navy">${esc(livro.categoria) || '—'}</span>
+      </td>
       <td class="muted hide-md">${esc(livro.editora) || '—'}</td>
-      <td class="muted hide-lg" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(livro.assunto) || '—'}</td>
+      <td class="muted hide-lg"
+          style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+          title="${esc(livro.assunto)}">
+        ${esc(livro.assunto) || '—'}
+      </td>
       <td class="muted hide-xl center">${esc(livro.anoPublicacao) || '—'}</td>
       <td class="td-actions">
-        <button class="btn-icon" onclick="APP.abrirModalEditar('${livro.id}')" title="Editar">
+        <button class="btn-icon" onclick="APP.abrirModalEditar('${livro.id}')" title="Editar livro">
           <i data-lucide="pencil" style="color:var(--navy-600);"></i>
         </button>
-        <button class="btn-icon btn-icon-red" onclick="APP.abrirModalDeletar('${livro.id}')" title="Deletar">
+        <button class="btn-icon btn-icon-red" onclick="APP.abrirModalDeletar('${livro.id}')" title="Eliminar livro">
           <i data-lucide="trash-2" style="color:var(--red-600);"></i>
         </button>
       </td>
     `;
-    tbody.appendChild(tr);
+    fragment.appendChild(tr);
   });
 
+  tbody.appendChild(fragment);
   lucide.createIcons({ nodes: [tbody] });
 }
 
 // ============================================================
-// RENDERIZAR GRADE (Galeria de Capas)
+// GRADE (GALERIA DE CAPAS)
 // ============================================================
 const COVER_GRADIENTS = [
   ['#1e3a5f','#2857d4'], ['#1a2f96','#4d7de6'],
@@ -159,7 +271,7 @@ const COVER_GRADIENTS = [
 ];
 
 function getBookGradient(titulo) {
-  const idx = (titulo || '').charCodeAt(0) % COVER_GRADIENTS.length;
+  const idx = Math.abs((titulo || '').charCodeAt(0) || 0) % COVER_GRADIENTS.length;
   return COVER_GRADIENTS[idx];
 }
 
@@ -178,132 +290,78 @@ function renderizarGrade(dados, containerId) {
     return;
   }
 
+  const fragment = document.createDocumentFragment();
+
   dados.forEach(livro => {
     const [c1, c2] = getBookGradient(livro.titulo);
-    const card = document.createElement('div');
+    const card     = document.createElement('div');
     card.className = 'book-card';
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
-    card.onclick = () => APP.abrirDetalhe(livro.id);
-    card.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') APP.abrirDetalhe(livro.id); };
+    card.setAttribute('aria-label', `Ver detalhes de ${livro.titulo}`);
+    card.onclick   = () => APP.abrirDetalhe(livro.id);
+    card.onkeydown = e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        APP.abrirDetalhe(livro.id);
+      }
+    };
 
     const coverInner = livro.capaURL
       ? `<img src="${esc(livro.capaURL)}" alt="${esc(livro.titulo)}" loading="lazy"
              class="book-cover-img"
-             onerror="this.parentElement.innerHTML = buildPlaceholderHTML('${esc(livro.titulo).replace(/'/g,"\\'")}','${esc(livro.autor).replace(/'/g,"\\'")}','${c1}','${c2}')">`
-      : buildPlaceholderHTML(livro.titulo, livro.autor, c1, c2);
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+         <div class="book-placeholder" style="display:none;background:linear-gradient(145deg,${c1} 0%,${c2} 100%);">
+           <span class="placeholder-title">${esc(livro.titulo)}</span>
+           <span class="placeholder-author">${esc(livro.autor)}</span>
+         </div>`
+      : `<div class="book-placeholder" style="background:linear-gradient(145deg,${c1} 0%,${c2} 100%);">
+           <i data-lucide="book-open" style="width:26px;height:26px;color:rgba(255,255,255,0.25);"></i>
+           <span class="placeholder-title">${esc(livro.titulo)}</span>
+           <span class="placeholder-author">${esc(livro.autor)}</span>
+         </div>`;
 
     card.innerHTML = `
-      <div class="book-cover" style="background:linear-gradient(145deg,${c1} 0%,${c2} 100%);">
-        ${coverInner}
-      </div>
+      <div class="book-cover">${coverInner}</div>
       <div class="book-card-body">
         <div class="book-card-title">${esc(livro.titulo)}</div>
         <div class="book-card-author">${esc(livro.autor)}</div>
         <div class="book-card-cat">${esc(livro.categoria)}</div>
       </div>
       <div class="book-card-actions" onclick="event.stopPropagation()">
-        <button class="btn-icon" onclick="APP.abrirModalEditar('${livro.id}')" title="Editar">
+        <button class="btn-icon" onclick="APP.abrirModalEditar('${livro.id}')"
+                title="Editar" style="padding:0.3rem;">
           <i data-lucide="pencil" style="width:13px;height:13px;color:var(--navy-600);"></i>
         </button>
-        <button class="btn-icon btn-icon-red" onclick="APP.abrirModalDeletar('${livro.id}')" title="Deletar">
+        <button class="btn-icon btn-icon-red" onclick="APP.abrirModalDeletar('${livro.id}')"
+                title="Deletar" style="padding:0.3rem;">
           <i data-lucide="trash-2" style="width:13px;height:13px;color:var(--red-600);"></i>
         </button>
       </div>
     `;
-    container.appendChild(card);
+    fragment.appendChild(card);
   });
 
+  container.appendChild(fragment);
   lucide.createIcons({ nodes: [container] });
 }
 
-function buildPlaceholderHTML(titulo, autor, c1, c2) {
-  return `
-    <div class="book-placeholder" style="background:linear-gradient(145deg,${c1} 0%,${c2} 100%);">
-      <i data-lucide="book-open" style="width:26px;height:26px;color:rgba(255,255,255,0.25);"></i>
-      <span class="placeholder-title">${esc(titulo)}</span>
-      <span class="placeholder-author">${esc(autor)}</span>
-    </div>`;
-}
-
 // ============================================================
-// ALTERNADOR DE VISTA
+// TOGGLE VISTA LISTA/GRADE
 // ============================================================
 function setView(mode) {
   setViewMode(mode);
-  document.getElementById('view-grid-btn').classList.toggle('active', mode === 'grid');
-  document.getElementById('view-list-btn').classList.toggle('active', mode === 'list');
-  document.getElementById('view-list').style.display = mode === 'list' ? 'block' : 'none';
-  document.getElementById('view-grid').style.display = mode === 'grid' ? 'block' : 'none';
+
+  const btnGrid = document.getElementById('view-grid-btn');
+  const btnList = document.getElementById('view-list-btn');
+  const elList  = document.getElementById('view-list');
+  const elGrid  = document.getElementById('view-grid');
+
+  if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
+  if (btnList) btnList.classList.toggle('active', mode === 'list');
+  if (elList)  elList.style.display  = mode === 'list' ? 'block' : 'none';
+  if (elGrid)  elGrid.style.display  = mode === 'grid' ? 'block' : 'none';
 
   if (mode === 'grid') renderizarGrade(APP.livrosFiltrados);
   else                 renderizarTabela(APP.livrosFiltrados);
-}
-
-// ============================================================
-// DROPDOWN DE CATEGORIAS
-// ============================================================
-function popularDropdowns() {
-  const selectIds = ['c-categoria'];
-  selectIds.forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const prev = sel.value;
-    sel.innerHTML = '<option value="" disabled>Selecione a Categoria</option>';
-    APP.categorias.forEach(cat => {
-      const opt = document.createElement('option');
-      opt.value = cat; opt.textContent = cat;
-      if (cat === prev) opt.selected = true;
-      sel.appendChild(opt);
-    });
-  });
-}
-
-function popularSelectAnanias() {
-  const sel = document.getElementById('ananias-select');
-  if (!sel) return;
-  const prev = sel.value;
-  sel.innerHTML = '<option value="" disabled selected>Escolha um livro para resumir...</option>';
-  [...APP.livros].sort((a,b) => a.titulo.localeCompare(b.titulo)).forEach(l => {
-    const opt = document.createElement('option');
-    opt.value = l.id;
-    opt.textContent = `${l.titulo} — ${l.autor}`;
-    if (l.id === prev) opt.selected = true;
-    sel.appendChild(opt);
-  });
-}
-
-// ============================================================
-// ACTUALIZAR CONTADORES / BADGES
-// ============================================================
-function actualizarContadores() {
-  const total = APP.livros.length;
-  const filtrados = APP.livrosFiltrados.length;
-
-  const badge = document.getElementById('banner-badge');
-  if (badge) badge.textContent = `${total} livro${total !== 1 ? 's' : ''}`;
-
-  const tabLabel = document.getElementById('tab-lista-label');
-  if (tabLabel) tabLabel.textContent = `Lista (${total})`;
-
-  const listaCount = document.getElementById('lista-count');
-  if (listaCount) listaCount.textContent = filtrados;
-}
-
-// ============================================================
-// SINCRONIZAÇÃO STATUS
-// ============================================================
-function mostrarStatusSync(estado) {
-  const el = document.getElementById('sync-status');
-  if (!el) return;
-  const configs = {
-    syncing: { icon: 'loader-2', text: 'Sincronizando...', cls: 'sync-syncing', spin: true },
-    ok:      { icon: 'cloud-check', text: 'Sincronizado',  cls: 'sync-ok',      spin: false },
-    offline: { icon: 'cloud-off',   text: 'Offline',       cls: 'sync-offline', spin: false },
-    error:   { icon: 'cloud-x',     text: 'Erro de sync',  cls: 'sync-error',   spin: false },
-  };
-  const cfg = configs[estado] || configs.offline;
-  el.className = `sync-indicator ${cfg.cls}`;
-  el.innerHTML = `<i data-lucide="${cfg.icon}" style="width:13px;height:13px;${cfg.spin?'animation:spin 1s linear infinite;':''}"></i><span>${cfg.text}</span>`;
-  lucide.createIcons({ nodes: [el] });
 }

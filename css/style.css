@@ -858,3 +858,358 @@ tbody td.center { text-align: center; }
 @media (max-width: 400px) {
   #grid-container { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ============================================================
+   MÓDULO ESTANTES
+============================================================ */
+
+/* Galeria de estantes */
+#estantes-galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Card de estante */
+.estante-card {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  cursor: pointer;
+  transition: var(--transition);
+  border-bottom: 4px solid var(--estante-cor, var(--navy-800));
+}
+.estante-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+}
+
+/* Prateleira visual */
+.estante-shelf {
+  position: relative;
+  background: linear-gradient(180deg, #f8f5ee 0%, #ede8dc 100%);
+  padding: 0.75rem 0.75rem 0;
+  min-height: 100px;
+  overflow: hidden;
+}
+.estante-shelf-top {
+  height: 8px;
+  background: var(--estante-cor, var(--navy-800));
+  border-radius: 3px 3px 0 0;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.estante-shelf-spines {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  min-height: 72px;
+  padding: 0 4px;
+}
+.estante-shelf-bottom {
+  height: 10px;
+  background: var(--estante-cor, var(--navy-800));
+  opacity: 0.85;
+  margin-top: 2px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+.estante-shelf-leg {
+  position: absolute;
+  bottom: 0;
+  width: 12px;
+  height: 18px;
+  background: var(--estante-cor, var(--navy-800));
+  opacity: 0.7;
+  border-radius: 0 0 3px 3px;
+}
+.estante-shelf-leg.left  { left: 18px; }
+.estante-shelf-leg.right { right: 18px; }
+
+/* Lombadas dos livros na prateleira */
+.book-spine {
+  width: 16px;
+  border-radius: 2px 2px 0 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3px;
+  cursor: default;
+  transition: transform 0.15s;
+  box-shadow: 1px 0 3px rgba(0,0,0,0.2);
+}
+.book-spine:hover { transform: scaleY(1.05) translateY(-2px); }
+.book-spine span {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.45rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.08em;
+  overflow: hidden;
+  max-height: 40px;
+}
+.spine-placeholder {
+  width: 14px;
+  height: 55px;
+  background: rgba(0,0,0,0.06);
+  border-radius: 2px 2px 0 0;
+  flex-shrink: 0;
+}
+.spine-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 55px;
+  color: rgba(0,0,0,0.2);
+}
+.spine-more {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: rgba(0,0,0,0.35);
+  align-self: center;
+  padding: 0 3px;
+}
+
+/* Info da estante */
+.estante-info {
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.estante-icon-wrap {
+  width: 34px; height: 34px;
+  background: var(--estante-cor, var(--navy-800));
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+.estante-icon-wrap i, .estante-icon-wrap svg {
+  width: 17px; height: 17px;
+  color: rgba(255,255,255,0.9);
+}
+.estante-text { flex: 1; min-width: 0; }
+.estante-text h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--navy-800);
+  margin: 0 0 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.estante-text p {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.estante-actions {
+  display: flex;
+  gap: 0.1rem;
+  flex-shrink: 0;
+}
+
+/* ── Vista interior da estante ── */
+#estante-interior-view {
+  display: none;
+}
+.estante-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  color: var(--gray-400);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.estante-breadcrumb a {
+  color: var(--navy-600);
+  text-decoration: none;
+  cursor: pointer;
+}
+.estante-breadcrumb a:hover { text-decoration: underline; }
+
+.estante-interior-header {
+  background: linear-gradient(135deg, var(--estante-cor, var(--navy-800)) 0%, rgba(0,0,0,0.15) 100%),
+              var(--estante-cor, var(--navy-800));
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  color: #fff;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.estante-interior-header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 0.2rem;
+}
+.estante-interior-header p {
+  color: rgba(255,255,255,0.7);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Grid de itens */
+#itens-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+/* Cards de itens */
+.item-card {
+  background: #fff;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+  transition: var(--transition);
+}
+.item-card:hover { box-shadow: var(--shadow); }
+
+.item-card-nota    { border-left: 4px solid var(--gold-400); }
+.item-card-link    { border-left: 4px solid var(--navy-600); }
+.item-card-ficheiro{ border-left: 4px solid var(--green-600); }
+.item-card-livro   { border-left: 4px solid var(--red-600); }
+
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.8rem;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+}
+.item-type-icon {
+  width: 14px; height: 14px;
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+.item-titulo {
+  flex: 1;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--navy-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.item-date {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.65rem;
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+.item-actions { display: flex; gap: 0.1rem; flex-shrink: 0; }
+
+.item-body {
+  padding: 0.75rem 0.8rem;
+  font-size: 0.92rem;
+  color: var(--gray-700);
+}
+.item-body-nota {
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.item-link-url {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  color: var(--navy-600);
+  text-decoration: underline;
+  word-break: break-all;
+}
+.item-img-preview {
+  max-width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  display: block;
+}
+
+/* ── Selectores de Cor e Ícone ── */
+.cor-selector, .icone-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.cor-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+.cor-btn.selected, .cor-btn:hover {
+  border-color: var(--navy-800);
+  transform: scale(1.15);
+}
+.icone-btn {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--gray-200);
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  color: var(--gray-500);
+}
+.icone-btn:hover, .icone-btn.selected {
+  border-color: var(--navy-800);
+  color: var(--navy-800);
+  background: var(--navy-50);
+}
+.icone-btn svg { width: 16px; height: 16px; }
+
+/* ── Upload de capa inline ── */
+.upload-capa-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.upload-capa-preview {
+  width: 40px; height: 56px;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid var(--gray-200);
+  flex-shrink: 0;
+  display: none;
+}
+.upload-capa-preview.visible { display: block; }
+
+/* Responsivo */
+@media (max-width: 640px) {
+  #estantes-galeria { grid-template-columns: repeat(2, 1fr); gap: 0.85rem; }
+  #itens-container  { grid-template-columns: 1fr; }
+}
+@media (max-width: 400px) {
+  #estantes-galeria { grid-template-columns: 1fr; }
+}
