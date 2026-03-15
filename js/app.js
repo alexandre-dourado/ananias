@@ -77,13 +77,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Deep linking via hash
   const hash      = window.location.hash.replace('#', '');
-  const validTabs = ['cadastro','lista','recomendacoes','ananias','categorias','estantes','config'];
+  const validTabs = ['home','cadastro','lista','recomendacoes','ananias','categorias','estantes','config'];
 
   // Carrega dados e navega
   await inicializarDados();
 
   if (hash && validTabs.includes(hash)) setTab(hash);
-  else                                   setTab('cadastro');
+  else                                   setTab('home');
+
+  // Desafio diário (pequeno delay para não bloquear a home)
+  setTimeout(() => verificarDesafioDiario(), 1800);
 });
 
 // ============================================================

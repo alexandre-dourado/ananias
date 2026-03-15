@@ -36,6 +36,10 @@ const ITENS_HEADERS = [
   'ID','EstanteID','Tipo','Titulo','Conteudo',
   'URL','DriveFileID','DataCriacao'
 ];
+const SHEET_METAS       = 'Metas';
+const CACHE_KEY_METAS   = 'cache_metas';
+const METAS_HEADERS     = ['ID','Texto','Concluida','DataCriacao','DataConclusao'];
+
 const DEFAULT_CATEGORIAS = [
   'Clássico','Biografia','História','Religião',
   'Literatura Clássica','Literatura Brasileira','Negócios','Direito',
@@ -92,9 +96,16 @@ function _route(action, body) {
     // Utilitários
     'importarCSV':         () => svcImportarCSV(body.csvContent),
     'buscarCapaLivro':     () => svcBuscarCapa(body.titulo, body.autor),
+    // Metas
+    'getMetas':            () => svcGetMetas(),
+    'adicionarMeta':       () => svcAdicionarMeta(body.texto),
+    'toggleMeta':          () => svcToggleMeta(body.id, body.concluida),
+    'deletarMeta':         () => svcDeletarMeta(body.id),
     // IA
     'gerarRecomendacao':   () => svcGerarRecomendacao(body.livros),
     'gerarResumoAnanias':  () => svcGerarResumo(body.livro),
+    'gerarFrase':          () => svcGerarFrase(body.livro),
+    'gerarDesafio':        () => svcGerarDesafio(body.livro),
   };
 
   const handler = routes[action];
@@ -166,6 +177,7 @@ function _shLivros()    { return _sheet(SHEET_LIVROS,    LIVROS_HEADERS); }
 function _shCats()      { return _sheet(SHEET_CATEGORIAS,['Categoria','Ordem']); }
 function _shEstantes()  { return _sheet(SHEET_ESTANTES,  ESTANTES_HEADERS); }
 function _shItens()     { return _sheet(SHEET_ITENS,     ITENS_HEADERS); }
+function _shMetas()     { return _sheet(SHEET_METAS,     METAS_HEADERS); }
 
 // Leitura em lote — retorna array de objectos, excluindo cabeçalho e linhas vazias
 function _readAll(sheet, toObj) {
@@ -224,6 +236,26 @@ function _estanteFromRow(r) {
 function _estanteToRow(e, id, dt) {
   return [id||e.id||'', e.nome||'', e.descricao||'',
           e.cor||'#1e3a5f', e.icone||'library', dt||new Date().toISOString()];
+}
+
+function _metaFromRow(r) {
+  return {
+    id:             String(r[0]||''),
+    texto:          String(r[1]||''),
+    concluida:      r[2] === true || r[2] === 'TRUE' || r[2] === true,
+    dataCriacao:    r[3] ? String(r[3]) : '',
+    dataConclusao:  r[4] ? String(r[4]) : '',
+  };
+}
+
+function _metaToRow(meta, id, dt) {
+  return [
+    id||meta.id||'',
+    meta.texto||'',
+    meta.concluida ? true : false,
+    dt||meta.dataCriacao||new Date().toISOString(),
+    meta.dataConclusao||''
+  ];
 }
 
 function _itemFromRow(r) {
@@ -679,4 +711,110 @@ function svcGerarResumo(livro) {
     const usr = `Gere resumo para: Título: ${livro.titulo}, Autor: ${livro.autor}, Categoria: ${livro.categoria||'N/A'}, Assunto: ${livro.assunto||'N/A'}\n\nEstrutura OBRIGATÓRIA:\n**CONTEXTUALIZAÇÃO DA OBRA**\n**DIRETO AO PONTO**\n**RESUMO** (bullets *)\n**PONTOS PRINCIPAIS**\n**CONTRAPONTOS**`;
     return { success: true, ..._gemini(sys, usr) };
   } catch(e) { return { success: false, error: e.message }; }
+}
+
+// ─────────────────────────────────────────────
+//  SERVIÇOS — METAS
+// ─────────────────────────────────────────────
+function svcGetMetas() {
+  const cached = cacheGet(CACHE_KEY_METAS);
+  if (cached) return { success: true, data: cached, fromCache: true };
+
+  const metas = _readAll(_shMetas(), _metaFromRow);
+  metas.sort((a,b) => {
+    // Pendentes primeiro, depois por data decrescente
+    if (a.concluida !== b.concluida) return a.concluida ? 1 : -1;
+    return new Date(b.dataCriacao||0) - new Date(a.dataCriacao||0);
+  });
+  cacheSet(CACHE_KEY_METAS, metas);
+  return { success: true, data: metas };
+}
+
+function svcAdicionarMeta(texto) {
+  if (!texto?.trim()) return { success: false, error: 'Texto da meta é obrigatório.' };
+  const id  = Utilities.getUuid();
+  const dt  = new Date().toISOString();
+  const row = _metaToRow({ texto: texto.trim(), concluida: false }, id, dt);
+  _shMetas().appendRow(row);
+  cacheInvalidate(CACHE_KEY_METAS);
+  return { success: true, data: _metaFromRow(row) };
+}
+
+function svcToggleMeta(id, concluida) {
+  const sh  = _shMetas();
+  const row = _findRow(sh, id);
+  if (row === -1) return { success: false, error: 'Meta não encontrada.' };
+
+  const orig = sh.getRange(row, 1, 1, METAS_HEADERS.length).getValues()[0];
+  sh.getRange(row, 3).setValue(concluida ? true : false);
+  sh.getRange(row, 5).setValue(concluida ? new Date().toISOString() : '');
+  cacheInvalidate(CACHE_KEY_METAS);
+  return { success: true };
+}
+
+function svcDeletarMeta(id) {
+  const sh  = _shMetas();
+  const row = _findRow(sh, id);
+  if (row === -1) return { success: false, error: 'Meta não encontrada.' };
+  sh.deleteRow(row);
+  cacheInvalidate(CACHE_KEY_METAS);
+  return { success: true };
+}
+
+// ─────────────────────────────────────────────
+//  SERVIÇOS — IA: FRASE CURIOSA
+// ─────────────────────────────────────────────
+function svcGerarFrase(livro) {
+  try {
+    const sys = 'Você é um crítico literário e contador de histórias. Gere UMA única frase curiosa, intrigante ou surpreendente sobre o livro indicado. A frase deve ser concisa (máximo 2 linhas), instigante, e fazer o leitor querer saber mais. Responda APENAS com a frase, sem introduções, sem aspas, sem o nome do livro no início.';
+    const usr = `Livro: "${livro.titulo}" de ${livro.autor}${livro.categoria ? ` (${livro.categoria})` : ''}`;
+
+    const result = _gemini(sys, usr);
+    // Pega apenas a primeira frase/parágrafo limpo
+    const frase = result.text.split('\n').filter(l => l.trim())[0].trim();
+    return { success: true, frase };
+  } catch(e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ─────────────────────────────────────────────
+//  SERVIÇOS — IA: DESAFIO DIÁRIO
+// ─────────────────────────────────────────────
+function svcGerarDesafio(livro) {
+  try {
+    const sys = `Você é um professor que cria quiz de literatura.
+Gere UMA pergunta de múltipla escolha sobre o livro indicado.
+Responda APENAS em JSON válido, sem texto adicional, sem markdown, sem blocos de código.
+Formato exacto:
+{"pergunta":"texto da pergunta","opcoes":["A","B","C","D"],"correta":0,"explicacao":"breve explicação da resposta correcta"}
+Onde "correta" é o índice (0-3) da opção correcta.
+A pergunta deve ser interessante, sobre o conteúdo, tema ou autor. As opções devem ser plausíveis.`;
+
+    const usr = `Livro: "${livro.titulo}" de ${livro.autor}${livro.assunto ? `, assunto: ${livro.assunto}` : ''}`;
+
+    const result = _gemini(sys, usr);
+
+    // Parse JSON da resposta
+    let raw = result.text.trim();
+    // Remove possíveis backticks ou ```json
+    raw = raw.replace(/^```(?:json)?/,'').replace(/```$/,'').trim();
+
+    const parsed = JSON.parse(raw);
+
+    if (!parsed.pergunta || !Array.isArray(parsed.opcoes) || parsed.opcoes.length < 2) {
+      throw new Error('Formato de desafio inválido.');
+    }
+
+    return {
+      success:    true,
+      pergunta:   parsed.pergunta,
+      opcoes:     parsed.opcoes,
+      correta:    Number(parsed.correta) || 0,
+      explicacao: parsed.explicacao || '',
+    };
+  } catch(e) {
+    Logger.log('[svcGerarDesafio] ' + e);
+    return { success: false, error: e.message };
+  }
 }

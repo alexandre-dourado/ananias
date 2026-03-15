@@ -42,6 +42,39 @@
 <body>
 
 <!-- ============================================================
+     DESAFIO DIÁRIO (overlay bottom-sheet)
+============================================================ -->
+<div id="desafio-overlay" role="dialog" aria-modal="true" aria-label="Desafio do Dia">
+  <div class="desafio-sheet">
+
+    <div class="desafio-pill">
+      <i data-lucide="zap"></i> Desafio do Dia
+    </div>
+
+    <p class="desafio-livro-ref">
+      <i data-lucide="book-open"></i>
+      <span id="desafio-livro-titulo"></span>
+      <span style="opacity:0.5;"> — </span>
+      <span id="desafio-livro-autor"></span>
+    </p>
+
+    <p class="desafio-pergunta" id="desafio-pergunta"></p>
+
+    <div class="desafio-opcoes" id="desafio-opcoes"></div>
+
+    <p class="desafio-resultado" id="desafio-resultado" style="display:none;"></p>
+
+    <div id="desafio-explicacao-wrap" class="desafio-explicacao-wrap" style="display:none;">
+      <p class="desafio-explicacao" id="desafio-explicacao"></p>
+    </div>
+
+    <button class="btn btn-primary desafio-fechar-btn" onclick="fecharDesafio()">
+      <i data-lucide="x"></i> Fechar Desafio
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================
      LOADING OVERLAY
 ============================================================ -->
 <div id="loading-overlay">
@@ -70,7 +103,10 @@
      NAVEGAÇÃO
 ============================================================ -->
 <nav id="nav" role="navigation" aria-label="Navegação principal">
-  <button class="tab-btn active" data-tab="cadastro" onclick="setTab('cadastro')" aria-label="Aba Cadastro">
+  <button class="tab-btn active" data-tab="home" onclick="setTab('home')" aria-label="Aba Home">
+    <i data-lucide="home"></i><span class="tab-label">Home</span>
+  </button>
+  <button class="tab-btn" data-tab="cadastro" onclick="setTab('cadastro')" aria-label="Aba Cadastro">
     <i data-lucide="plus-circle"></i><span class="tab-label">Cadastro</span>
   </button>
   <button class="tab-btn" data-tab="lista" onclick="setTab('lista')" aria-label="Aba Lista">
@@ -195,8 +231,89 @@
 ============================================================ -->
 <main id="main-content">
 
+  <!-- ==================== ABA: HOME ==================== -->
+  <div id="tab-home" class="tab-content" style="display:block; opacity:1;">
+
+    <!-- Stats -->
+    <div class="home-stats">
+      <div class="home-stat-card" onclick="setTab('lista')">
+        <span class="home-stat-num" id="home-stat-livros">0</span>
+        <span class="home-stat-label">Livros</span>
+      </div>
+      <div class="home-stat-card green" onclick="setTab('estantes')">
+        <span class="home-stat-num" id="home-stat-estantes">0</span>
+        <span class="home-stat-label">Estantes</span>
+      </div>
+      <div class="home-stat-card gold">
+        <span class="home-stat-num" id="home-stat-metas">0</span>
+        <span class="home-stat-label">Metas</span>
+      </div>
+    </div>
+
+    <!-- Frase Curiosa -->
+    <div class="home-frase-card" id="home-frase-card">
+      <p class="home-frase-texto" id="home-frase-texto">
+        <span class="frase-loading">A buscar uma curiosidade literária...</span>
+      </p>
+      <span class="home-frase-livro" id="home-frase-livro"></span>
+      <div class="home-frase-actions">
+        <button class="home-frase-refresh" onclick="refreshFrase()" title="Nova frase">
+          <i data-lucide="refresh-cw"></i> Nova frase
+        </button>
+      </div>
+    </div>
+
+    <div class="home-grid" style="margin-top:1rem;">
+
+      <!-- Últimos Livros -->
+      <div class="card" style="grid-column:1/-1;">
+        <div class="home-section-header">
+          <h3><i data-lucide="clock"></i> Adicionados Recentemente</h3>
+          <a class="home-section-link" onclick="setTab('lista')">
+            Ver todos <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+          </a>
+        </div>
+        <div class="home-livros-scroll" id="home-ultimos-livros"></div>
+      </div>
+
+      <!-- Estantes -->
+      <div class="card">
+        <div class="home-section-header">
+          <h3><i data-lucide="library"></i> Minhas Estantes</h3>
+          <a class="home-section-link" onclick="setTab('estantes')">
+            Ver todas <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+          </a>
+        </div>
+        <div class="home-estantes-pills" id="home-estantes-preview"></div>
+      </div>
+
+      <!-- Metas -->
+      <div class="card" style="grid-column: span 1;">
+        <div class="home-section-header">
+          <h3><i data-lucide="check-circle-2"></i> Metas
+            <span id="metas-count" class="badge badge-navy" style="font-size:0.6rem;margin-left:0.3rem;vertical-align:middle;"></span>
+          </h3>
+          <button class="btn-icon" onclick="abrirDesafioManual()" title="Desafio do dia"
+                  style="padding:0.3rem 0.6rem;border-radius:999px;background:var(--gold-50);border:1px solid var(--gold-300);">
+            <i data-lucide="zap" style="width:13px;height:13px;color:var(--gold-600);"></i>
+            <span style="font-family:'Inter',sans-serif;font-size:0.65rem;font-weight:700;color:var(--gold-600);margin-left:0.2rem;">Desafio</span>
+          </button>
+        </div>
+        <ul class="metas-lista" id="metas-lista"></ul>
+        <div class="meta-add-group">
+          <input type="text" id="meta-input" placeholder="Nova meta ou objectivo..."
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();adicionarMeta();}">
+          <button class="btn btn-primary" onclick="adicionarMeta()" style="flex-shrink:0;">
+            <i data-lucide="plus"></i>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- .home-grid -->
+  </div><!-- #tab-home -->
+
   <!-- ==================== ABA: CADASTRO ==================== -->
-  <div id="tab-cadastro" class="tab-content" style="display:block; opacity:1;">
+  <div id="tab-cadastro" class="tab-content" style="display:none; opacity:0;">
     <div class="card">
       <h2><i data-lucide="plus-circle"></i> Cadastrar Novo Livro</h2>
       <div class="form-grid">
@@ -587,6 +704,37 @@
         </div>
       </div>
 
+      <!-- Funcionalidades -->
+      <div class="config-section">
+        <div class="config-section-header">
+          <i data-lucide="sliders" style="width:14px;height:14px;"></i>
+          Funcionalidades da Home
+        </div>
+        <div class="config-section-body">
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+
+            <label style="display:flex;align-items:center;justify-content:space-between;text-transform:none;font-size:0.88rem;cursor:pointer;">
+              <span style="display:flex;align-items:center;gap:0.4rem;">
+                <i data-lucide="quote" style="width:14px;height:14px;"></i>
+                Frase curiosa diária
+              </span>
+              <input type="checkbox" id="toggle-frase" onchange="salvarToggle('fraseDesativada', !this.checked)"
+                     style="width:18px;height:18px;cursor:pointer;accent-color:var(--navy-800);">
+            </label>
+
+            <label style="display:flex;align-items:center;justify-content:space-between;text-transform:none;font-size:0.88rem;cursor:pointer;">
+              <span style="display:flex;align-items:center;gap:0.4rem;">
+                <i data-lucide="zap" style="width:14px;height:14px;"></i>
+                Desafio diário ao abrir
+              </span>
+              <input type="checkbox" id="toggle-desafio" onchange="salvarToggle('desafioDesativado', !this.checked)"
+                     style="width:18px;height:18px;cursor:pointer;accent-color:var(--navy-800);">
+            </label>
+
+          </div>
+        </div>
+      </div>
+
       <!-- Info -->
       <div class="config-section">
         <div class="config-section-header">
@@ -754,6 +902,7 @@
 <script src="js/ai.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>
+<script src="js/home.js"></script>
 <script src="js/estantes.js"></script>
 
 <!-- PWA Install Prompt -->

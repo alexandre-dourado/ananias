@@ -94,3 +94,13 @@ async function fileToBase64(file) {
     reader.readAsDataURL(file);
   });
 }
+
+// ── METAS ──────────────────────────────────────────────────
+async function apiGetMetas()                   { return gasRequest('getMetas'); }
+async function apiAdicionarMeta(texto)         { return gasRequest('adicionarMeta',  { texto }); }
+async function apiToggleMeta(id, concluida)    { return gasRequest('toggleMeta',     { id, concluida }); }
+async function apiDeletarMeta(id)              { return gasRequest('deletarMeta',    { id }); }
+
+// ── IA: FRASE CURIOSA + DESAFIO ────────────────────────────
+async function apiGerarFrase(livro)   { return gasRequest('gerarFrase',   { livro }); }
+async function apiGerarDesafio(livro) { return gasRequest('gerarDesafio', { livro }); }

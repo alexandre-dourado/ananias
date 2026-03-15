@@ -104,6 +104,7 @@ function setTab(tabName) {
   }
 
   // Acções especiais ao entrar em cada aba
+  if (tabName === 'home')          inicializarHome();
   if (tabName === 'lista')         renderizarListaCompleta();
   if (tabName === 'recomendacoes') popularTabRec();
   if (tabName === 'categorias')    renderizarCategorias();
